@@ -1,1 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Fréquences Anti-Calcaire (Version unique)</title>
+    
+    <!-- =================================================================== -->
+    <!-- ========================= SECTION CSS ========================= -->
+    <!-- =================================================================== -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
 
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            color: #0056b3;
+            margin: 0;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 0.75rem;
+            border-radius: 5px;
+            border: 1px solid #ffeeba;
+            margin-top: 1rem;
+            font-size: 0.9em;
+        }
+
+        .app {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .controls, .visualization {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        h2 {
+            color: #333;
+            margin-top: 0;
+            font-size: 1.2rem;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        button.active {
+            background-color: #dc3545;
+        }
+
+        button.active:hover {
+            background-color: #c82333;
+        }
+
+        #status-text {
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        #pipe {
+            width: 100%;
+            height: 200px;
+            background-color: #e9ecef;
+            border: 3px solid #adb5bd;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .limescale-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 50%;
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+        }
+
+        /* Animation pour simuler la dissolution */
+        .limescale-particle.shaking {
+            animation: shake 0.1s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            25% { transform: translate(-1px, -1px) rotate(5deg); }
+            50% { transform: translate(1px, -1px) rotate(0deg); }
+            75% { transform: translate(-1px, 1px) rotate(-5deg); }
+            100% { transform: translate(1px, 1px) rotate(0deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- =================================================================== -->
+    <!-- ========================= SECTION HTML ======================== -->
+    <!-- =================================================================== -->
+    <div class="container">
+        <header>
+            <h1>Dissolveur de Calcaire Acoustique</h1>
+            <p class="warning">
+                <strong>Attention :</strong> Ceci est une simulation conceptuelle. L'efficacité sur le calcaire réel avec un haut-parleur standard n'est pas prouvée.
+            </p>
+        </header>
+
+        <main class="app">
+            <div class="controls">
+                <h2>Panneau de Contrôle</h2>
+                <div class="control-group">
+                    <label for="frequency-slider">Fréquence : <span id="frequency-value">15000</span> Hz</label>
+                    <input type="range" id="frequency-slider" min="100" max="22000" value="15000" step="100">
+                </div>
+                <button id="start-stop-button">Démarrer</button>
+                <p>État : <span id="status-text">Arrêté</span></p>
+            </div>
+
+            <div class="visualization">
+                <h2>Visualisation de l'Effet</h2>
+                <div id="pipe">
+                    <!-- Les particules de calcaire seront générées par JavaScript -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- ======================= SECTION JAVASCRIPT ====================== -->
+    <!-- =================================================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Références aux éléments du DOM
+            const frequencySlider = document.getElementById('frequency-slider');
+            const frequencyValue = document.getElementById('frequency-value');
+            const startStopButton = document.getElementById('start-stop-button');
+            const statusText = document.getElementById('status-text');
+            const pipe = document.getElementById('pipe');
+
+            // Paramètres de l'API Audio
+            let audioContext;
+            let oscillator;
+            let gainNode;
+            let isPlaying = false;
+
+            // Générer les particules de calcaire pour la visualisation
+            const particleCount = 50;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'limescale-particle';
+                particle.style.left = `${Math.random() * 95}%`;
+                particle.style.bottom = `${(Math.random() * 0.4) * 100}%`; // Concentrer en bas sur 40% de la hauteur
+                pipe.appendChild(particle);
+            }
+            const particles = document.querySelectorAll('.limescale-particle');
+
+            // Mettre à jour l'affichage de la fréquence
+            frequencySlider.addEventListener('input', () => {
+                const newFrequency = frequencySlider.value;
+                frequencyValue.textContent = newFrequency;
+                if (isPlaying && oscillator) {
+                    oscillator.frequency.setValueAtTime(parseFloat(newFrequency), audioContext.currentTime);
+                }
+            });
+
+            // Gérer le bouton Démarrer/Arrêter
+            startStopButton.addEventListener('click', () => {
+                if (isPlaying) {
+                    stopSound();
+                } else {
+                    startSound();
+                }
+            });
+
+            function startSound() {
+                // Initialiser l'API Audio Web (doit être fait suite à une action de l'utilisateur)
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Si le contexte était suspendu (politique de lecture auto des navigateurs), on le réactive.
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                // Créer un oscillateur (génère l'onde sonore)
+                oscillator = audioContext.createOscillator();
+                // Créer un nœud de gain (pour contrôler le volume)
+                gainNode = audioContext.createGain();
+
+                // Connecter les nœuds : oscillateur -> gain -> sortie (haut-parleurs)
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // Définir les propriétés de l'oscillateur
+                oscillator.type = 'sine'; // Onde sinusoïdale, la plus pure
+                oscillator.frequency.value = parseFloat(frequencySlider.value);
+                gainNode.gain.value = 0.5; // Mettre le volume à 50% pour commencer
+
+                // Démarrer l'oscillateur
+                oscillator.start();
+                isPlaying = true;
+
+                // Mettre à jour l'interface
+                updateUI(true);
+            }
+
+            function stopSound() {
+                if (oscillator) {
+                    // Baisser progressivement le volume pour éviter un "clic" désagréable
+                    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.1);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                }
+                isPlaying = false;
+                // Mettre à jour l'interface
+                updateUI(false);
+            }
+
+            function updateUI(playing) {
+                if (playing) {
+                    startStopButton.textContent = 'Arrêter';
+                    startStopButton.classList.add('active');
+                    statusText.textContent = 'En cours...';
+                    statusText.style.color = '#28a745';
+                    // Démarrer l'animation de visualisation
+                    particles.forEach(p => p.classList.add('shaking'));
+                } else {
+                    startStopButton.textContent = 'Démarrer';
+                    startStopButton.classList.remove('active');
+                    statusText.textContent = 'Arrêté';
+                    statusText.style.color = '#dc3545';
+                    // Arrêter l'animation
+                    particles.forEach(p => p.classList.remove('shaking'));
+                }
+            }
+        });
+    </script>
+</body>
+</html>
